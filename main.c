@@ -35,8 +35,8 @@ int nli =0 ; //afficher en cas de
 // on changera rescommande pour la mettre dans le main
 int rescommande = 0;
 char* nomFichier[SIZEMAX]; //dans la theorie ici size max vaut 1 car un seul nom de fichier
-int redir= -1;//pour la redirection
-int redire=-1;
+int redir= -1;//pour la redirection sortie '>'
+int redire= -1;//pour la redirection entree '<'
 
 int main(int argc, const char * argv[]) {
     char* resP[SIZEMAX];
@@ -58,8 +58,9 @@ int main(int argc, const char * argv[]) {
     while (1) {
         //printf("rescommande = %d", rescommande);fflush(stdout);
         //sortie du prgm
-        if(fin == 64){break;}
-        //redirection
+        if(fin == 64){
+            break;
+        }
         
         
         if (rescommande == 2) {
@@ -78,7 +79,13 @@ int main(int argc, const char * argv[]) {
                 close(redir);
                 redir = -1;
             }
-            //on a subi un changement d entree
+            if(!(redire == -1)&& resP[0] == '\0'){
+                
+                    close(0);
+                    dup(redire);
+                    close(redire);
+                    redire = -1;
+            }
            
         }
         
@@ -142,13 +149,15 @@ int commande(int fin, int fout, char* resP[], char* param, int* bg){
             
         case 2: // &
              //TO-DO
+            // execution en background c est comme executer avec & ou bg
+            // pourquoi ne pas forker en executant la commander et ne pas mettre de wait dans le pere
+            
             *bg=1;
             break;
             
         case 3: // <
-            c = getchar();// enlever le >
+            c = getchar();// enlever le <
             parsing(nomFichier);
-            //printf("\nCas 4 : %s %c\n",nomFichier[0],c);fflush(stdout);
             redire = dup(0); //on ne perd pas l entre courante
             close(0);
             i=open(nomFichier[0],O_RDONLY, 0666);//le nom du fichier
@@ -166,39 +175,28 @@ int commande(int fin, int fout, char* resP[], char* param, int* bg){
             i=open(nomFichier[0],O_CREAT | O_RDWR | O_TRUNC, 0666);//le nom du fichier
             fprintf(stderr,"fichier ouvert : %s canal num : %d\n",nomFichier[0],i);
             dup(i);//comme ca on ecrira dessus avec le truc superieur
-            
             break;
             
         case 5: // |
              //TO-DO
+            // tube donc pipe , fork , la sortie du premier d envier l entree du suivant etc etc
             break;
             
         case 7: // EOF
-            
-             //TO-DO
-            //on arrive a la fin du fichier lu en cas de redire '<'
-            if(redire !=-1){
-                close(0);
-                dup(redire);
-                close(redire);
-                redire = -1;
-                break;
-            }else{
-                
-              //  rescommande =2;// a enlever
-
-            }
-            
-            
-               //               //  return 0;
-            break;
+            //si l on a un ctrl + D alors on termine le programme
+            printf("\nEXIT par rupture ctrl + D \n");
+            return 64;
+            break;//inutile
             
         case 10: // mot
-            if (strcmp(resP[0], "exit")==0) {
-               // *fin=1;
-                printf("\nEXIT\n");
+            if(strcmp(resP[0], "exit")==0) {
+                printf("\nEXIT propre \n");
                 return 64;
-            }
+            }/*else{
+                printf("\nMauvaise commande veuillez reessayer\n");
+                resP[0]='\0';
+                //printf("DAUPHINE> ");
+            }*/
             break;
             
         default:
