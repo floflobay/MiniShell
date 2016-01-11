@@ -10,3 +10,11 @@ caractere lu 10
 
 résultat parsing 0
 debut parsing
+caractere lu 101 e
+valeur du caractere lu 120 x
+valeur du caractere lu 105 i
+valeur du caractere lu 116 t
+valeur du caractere lu 10 
+
+element comm lue exit (null)
+résultat parsing 10
