@@ -3,15 +3,16 @@
 //  MiniShell
 //
 //  Created by AntoineAuer on 12/11/2015.
-//  Copyright © 2015 AntoineAuer. All rights reserved.
+//  Copyright © 2016 florian bayeux. All rights reserved.
 //
 
 //-------------------------//
-/* Pb constaté a l execution :
-1) Lorsque on ne marque rien il refait l ancienne commande // solve suis au la RAZ de Resp
- 
-
-*/
+/*
+ A gerer : 
+    1) creer un fichier en shell qui permettra de savoir si le mot fait parti des commandes unix
+    2) creer le case 5 avec un fork et un pipe en creant un tube 
+    3) pb du exit et du ctrl d qui ne font pas s arreter le prgm en cas d erreur
+ */
 
 
 #define SIZEMAX 100
@@ -28,21 +29,24 @@
 int parsing(char **resP);
 int commande(int fin, int fout, char* resP[], char* param, int* bg);
 int delimiteur(int c);
-int nli =0 ; //afficher en cas de
 
 
 // variables globales
 // on changera rescommande pour la mettre dans le main
 int rescommande = 0;
 char* nomFichier[SIZEMAX]; //dans la theorie ici size max vaut 1 car un seul nom de fichier
-int redir= -1;//pour la redirection sortie '>'
-int redire= -1;//pour la redirection entree '<'
+int redir = -1;//pour la redirection sortie '>'
+int redire = -1;//pour la redirection entree '<'
+int nli = 0 ; //afficher en cas de \n
 
 int main(int argc, const char * argv[]) {
+   
     char* resP[SIZEMAX];
     int fin = 0;    
-    int fout[1];    fout[0]=1;
+    int fout[1];
+    int fout[0]=1;
     int bg[1];
+    
     // Création d'un fichier récuperant les impressions intermediaires (deboggage)
     int fmess = open("impErreur.txt",O_CREAT | O_RDWR | O_TRUNC, 0666);
     close(2);
@@ -56,13 +60,13 @@ int main(int argc, const char * argv[]) {
     fflush(stdout);
 
     while (1) {
-        //printf("rescommande = %d", rescommande);fflush(stdout);
-        //sortie du prgm
+
+        //sortie du prgm en cas de eof ou de exit
         if(fin == 64){
             break;
         }
         
-        
+        // en cas de \n
         if (rescommande == 2) {
             rescommande=0;
             nli=0;
@@ -70,21 +74,22 @@ int main(int argc, const char * argv[]) {
             fflush(stdout);
         }else{
             nli=0;
-            
             fin = commande(0,1,resP,param,bg);
             //on a subi un changement de sortie
+            
             if(!(redir == -1 ) && resP[0]== '\0'){
+                //on remet en place la sortie
                 close(1);
                 dup(redir);
                 close(redir);
                 redir = -1;
             }
             if(!(redire == -1)&& resP[0] == '\0'){
-                
-                    close(0);
-                    dup(redire);
-                    close(redire);
-                    redire = -1;
+                //on remet en place l'entree
+                close(0);
+                dup(redire);
+                close(redire);
+                redire = -1;
             }
            
         }
@@ -103,7 +108,7 @@ int commande(int fin, int fout, char* resP[], char* param, int* bg){
     
     switch (s) {
  
-        case 0: // NL`nouvelle lign
+        case 0: // NL nouvelle lign
             nli = 1;
             pid_t pid2 ;
             if ( (pid2 = fork())==0 ){
@@ -122,15 +127,11 @@ int commande(int fin, int fout, char* resP[], char* param, int* bg){
         case 1: // ;
             getchar();
             nli+=2;
-          // if( nl == 3 ){getchar();}//on prend le ;
-             res = 2;
+            res = 2;
             pid_t pid ;
             if ( (pid = fork())==0 ){
-                //printf("\nexecute");fflush(stdout);
                 rescommande = 1; //cela permettra de ne pas de reecrire
                 execvp(resP[0], resP);
-               // printf("\nexecute");fflush(stdout);
-
             }else{
                 wait(&status);
                 if(nli==3){
@@ -142,23 +143,18 @@ int commande(int fin, int fout, char* resP[], char* param, int* bg){
                 eof = 2;
                break;
             }
-            
-            
-            
             break;
             
         case 2: // &
-            getchar();
             // execution en background c est comme executer avec & ou bg
+            getchar();
             pid_t pid3;
             if ( (pid3 = fork() )==0 ){
                 execvp(resP[0], resP);
-                break;
             }else{
                 resP[0] = '\0';// on peut donc nettoyer apres l execution resP .
-                break;
             }
-            
+            break;
         case 3: // <
             c = getchar();// enlever le <
             parsing(nomFichier);
@@ -173,7 +169,6 @@ int commande(int fin, int fout, char* resP[], char* param, int* bg){
             //on sait ce qu on doit mettre on ne sait pas ou il faut donc faire un parsing et apres un exec
             c = getchar();// enlever le >
             parsing(nomFichier);
-            //printf("\nCas 4 : %s %c\n",nomFichier[0],c);fflush(stdout);
             redir = dup(1); //on ne perd pas la sortie courante
             close(1);
             i=open(nomFichier[0],O_CREAT | O_RDWR | O_TRUNC, 0666);//le nom du fichier
@@ -190,8 +185,6 @@ int commande(int fin, int fout, char* resP[], char* param, int* bg){
             //si l on a un ctrl + D alors on termine le programme
             printf("\nEXIT par rupture ctrl + D \n");
             return 64;
-            break;//inutile
-            
         case 10: // mot
             if(strcmp(resP[0], "exit")==0) {
                 printf("\nEXIT propre \n");
@@ -254,11 +247,10 @@ int parsing(char ** resP){
                         }
                     }
                     else{
-                        //fprintf(stderr, "break\n");
                         break;
                     }
                 }
-                    break;
+                break;
             }
                         
             while(c == ' ')
@@ -276,6 +268,7 @@ int parsing(char ** resP){
             }
         }
     }
+    
     //erreur a traiter
     fprintf(stderr, "element comm lue %s %s\n", resP[0],resP[1]);
     return 404;
