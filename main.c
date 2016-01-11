@@ -148,12 +148,16 @@ int commande(int fin, int fout, char* resP[], char* param, int* bg){
             break;
             
         case 2: // &
-             //TO-DO
+            getchar();
             // execution en background c est comme executer avec & ou bg
-            // pourquoi ne pas forker en executant la commander et ne pas mettre de wait dans le pere
-            
-            *bg=1;
-            break;
+            pid_t pid3;
+            if ( (pid3 = fork() )==0 ){
+                execvp(resP[0], resP);
+                break;
+            }else{
+                resP[0] = '\0';// on peut donc nettoyer apres l execution resP .
+                break;
+            }
             
         case 3: // <
             c = getchar();// enlever le <
@@ -179,7 +183,7 @@ int commande(int fin, int fout, char* resP[], char* param, int* bg){
             
         case 5: // |
              //TO-DO
-            // tube donc pipe , fork , la sortie du premier d envier l entree du suivant etc etc
+            // tube donc pipe ,z fork , la sortie du premier d envier l entree du suivant etc etc
             break;
             
         case 7: // EOF
@@ -192,11 +196,8 @@ int commande(int fin, int fout, char* resP[], char* param, int* bg){
             if(strcmp(resP[0], "exit")==0) {
                 printf("\nEXIT propre \n");
                 return 64;
-            }/*else{
-                printf("\nMauvaise commande veuillez reessayer\n");
-                resP[0]='\0';
-                //printf("DAUPHINE> ");
-            }*/
+            }
+            // creer une fonction de verification de mots
             break;
             
         default:
